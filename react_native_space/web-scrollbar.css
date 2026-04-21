@@ -1,0 +1,27 @@
+/* Web scrollbar styling */
+
+/* Default - thin scrollbars */
+* {
+  scrollbar-width: auto;
+  scrollbar-color: #6200ea #E0E0E0;
+}
+
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #E0E0E0;
+  border-radius: 6px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #6200ea;
+  border-radius: 6px;
+  border: 2px solid #E0E0E0;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #4a00b0;
+}

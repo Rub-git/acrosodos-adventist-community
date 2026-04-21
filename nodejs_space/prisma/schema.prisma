@@ -1,0 +1,223 @@
+// Prisma schema for Adventist Community App
+
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/adventist_community_app/nodejs_space/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum Language {
+  en
+  es
+}
+
+model user {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  password              String?   // Nullable for OAuth users
+  name                  String
+  profilepictureurl     String?   @map("profile_picture_url")
+  localchurch           String?   @map("local_church")
+  ministry              String?
+  country               String?
+  preferredlanguage     Language  @default(en) @map("preferred_language")
+  timezone              String    @default("America/New_York")
+  role                  UserRole  @default(USER)
+  isactive              Boolean   @default(true) @map("is_active")
+  suspensionreason      String?   @map("suspension_reason")
+  suspendedat           DateTime? @map("suspended_at")
+  suspendedby           String?   @map("suspended_by")
+  hasacceptedvalues     Boolean   @default(false) @map("has_accepted_values")
+  valuesacceptedat      DateTime? @map("values_accepted_at")
+  googleid              String?   @unique @map("google_id")
+  appleid               String?   @unique @map("apple_id")
+  resettoken            String?   @map("reset_token")
+  resettokenexpires     DateTime? @map("reset_token_expires")
+  createdat             DateTime  @default(now()) @map("created_at")
+  updatedat             DateTime  @updatedAt @map("updated_at")
+  lastloginat           DateTime? @map("last_login_at")
+
+  // Relations
+  posts                 post[]
+  reactions             reaction[]
+  comments              comment[]
+  flagsreported         flag[]     @relation("ReportedByUser")
+  flagsreviewed         flag[]     @relation("ReviewedByUser")
+  hiddenposts           post[]     @relation("HiddenByUser")
+  hiddencomments        comment[]  @relation("HiddenByUser")
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+// ============================================
+// CONTENT POSTING
+// ============================================
+
+enum ContentType {
+  VIDEO
+  AUDIO
+  IMAGE
+  TEXT
+}
+
+enum PostCategory {
+  PRAYER_REQUEST
+  TESTIMONY
+  BIBLICAL_REFLECTION
+  SABBATH_ACTIVITY
+  GENERAL_ENCOURAGEMENT
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  FLAGGED
+  REJECTED
+}
+
+model post {
+  id                    String            @id @default(uuid())
+  userid                String            @map("user_id")
+  contenttype           ContentType       @map("content_type")
+  category              PostCategory
+  textcontent           String?           @map("text_content")
+  mediaurl              String?           @map("media_url")
+  thumbnailurl          String?           @map("thumbnail_url")
+  mediaduration         Int?              @map("media_duration") // seconds
+  mediasize             Int?              @map("media_size") // bytes
+  language              Language          @default(en)
+  ishidden              Boolean           @default(false) @map("is_hidden")
+  hiddenreason          String?           @map("hidden_reason")
+  hiddenby              String?           @map("hidden_by")
+  hiddenat              DateTime?         @map("hidden_at")
+  aimoderationstatus    ModerationStatus  @default(PENDING) @map("ai_moderation_status")
+  aimoderationnotes     String?           @map("ai_moderation_notes")
+  createdat             DateTime          @default(now()) @map("created_at")
+  updatedat             DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  user                  user              @relation(fields: [userid], references: [id], onDelete: Cascade)
+  hiddenbyuser          user?             @relation("HiddenByUser", fields: [hiddenby], references: [id])
+  reactions             reaction[]
+  comments              comment[]
+  flags                 flag[]
+
+  @@index([userid])
+  @@index([category])
+  @@index([language])
+  @@index([createdat])
+  @@index([aimoderationstatus])
+  @@index([ishidden])
+  @@map("posts")
+}
+
+// ============================================
+// REACTIONS
+// ============================================
+
+enum ReactionType {
+  ENCOURAGES_ME
+  PRAYING_FOR_YOU
+}
+
+model reaction {
+  id            String        @id @default(uuid())
+  postid        String        @map("post_id")
+  userid        String        @map("user_id")
+  reactiontype  ReactionType  @map("reaction_type")
+  createdat     DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  post          post          @relation(fields: [postid], references: [id], onDelete: Cascade)
+  user          user          @relation(fields: [userid], references: [id], onDelete: Cascade)
+
+  @@unique([postid, userid])
+  @@index([postid])
+  @@index([userid])
+  @@map("reactions")
+}
+
+// ============================================
+// COMMENTS
+// ============================================
+
+model comment {
+  id                    String            @id @default(uuid())
+  postid                String            @map("post_id")
+  userid                String            @map("user_id")
+  content               String
+  ishidden              Boolean           @default(false) @map("is_hidden")
+  hiddenreason          String?           @map("hidden_reason")
+  hiddenby              String?           @map("hidden_by")
+  hiddenat              DateTime?         @map("hidden_at")
+  aimoderationstatus    ModerationStatus  @default(PENDING) @map("ai_moderation_status")
+  aimoderationnotes     String?           @map("ai_moderation_notes")
+  createdat             DateTime          @default(now()) @map("created_at")
+  updatedat             DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  post                  post              @relation(fields: [postid], references: [id], onDelete: Cascade)
+  user                  user              @relation(fields: [userid], references: [id], onDelete: Cascade)
+  hiddenbyuser          user?             @relation("HiddenByUser", fields: [hiddenby], references: [id])
+  flags                 flag[]
+
+  @@index([postid])
+  @@index([userid])
+  @@index([aimoderationstatus])
+  @@index([ishidden])
+  @@map("comments")
+}
+
+// ============================================
+// CONTENT REPORTING & MODERATION
+// ============================================
+
+enum FlagStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+model flag {
+  id            String      @id @default(uuid())
+  postid        String?     @map("post_id")
+  commentid     String?     @map("comment_id")
+  reportedby    String      @map("reported_by")
+  reason        String
+  description   String?
+  status        FlagStatus  @default(PENDING)
+  reviewedby    String?     @map("reviewed_by")
+  reviewedat    DateTime?   @map("reviewed_at")
+  reviewnotes   String?     @map("review_notes")
+  createdat     DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  post          post?       @relation(fields: [postid], references: [id], onDelete: Cascade)
+  comment       comment?    @relation(fields: [commentid], references: [id], onDelete: Cascade)
+  reporter      user        @relation("ReportedByUser", fields: [reportedby], references: [id])
+  reviewer      user?       @relation("ReviewedByUser", fields: [reviewedby], references: [id])
+
+  @@index([postid])
+  @@index([commentid])
+  @@index([reportedby])
+  @@index([status])
+  @@index([createdat])
+  @@map("flags")
+}

@@ -1,0 +1,40 @@
+{
+  "cli": {
+    "version": ">= 16.28.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "base": {
+      "corepack": true,
+      "android": {
+        "credentialsSource": "local",
+        "resourceClass": "large"
+      }
+    },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "extends": "base"
+    },
+    "preview": {
+      "distribution": "internal",
+      "extends": "base",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://acrosodos.com"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "extends": "base",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://acrosodos.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
