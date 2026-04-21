@@ -4,6 +4,7 @@ dist/
 **/dist/
 .expo/
 **/.expo/
+.abacus.donotdelete
 .env
 .env.*
 !.env.example
